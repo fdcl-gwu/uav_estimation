@@ -2,6 +2,5 @@
 
 ## Implementation of following filters
 
-- [ ] Uncented Kalman Filter
-
-
+- [ ] Unscented Kalman Filter
+- [ ] Nonlinear dynamic equations
