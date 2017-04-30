@@ -19,6 +19,22 @@ def sigmaPoints(x, P, c):
     Y = np.tile(x,((A.shape)[0],1)).T
     return np.vstack((x, Y+A, Y-A)).T
 
+def dss(x):
+    """State space UAV dynamics"""
+    dt = 0.01
+    A = np.zeros((12,12))
+    for i in range(6):
+        A[i][i], A[i][i+1] = 1, dt
+        A[i+6][i+6] = 1
+    return A.dot(x)
+
+def sss(x):
+    """Sensor state"""
+    A = np.zeros((6,12))
+    for i in range(6):
+        A[i][i+6] = 1
+    return A.dot(x)
+
 def f(x):
     """nonlinear state function"""
     return np.array([x[1],x[2],0.05*x[0]*(x[1]+x[2])])
@@ -47,7 +63,7 @@ def ut(func, x, wm, wc, n_f, Q):
     Sigma = Xd.dot(np.diag(wc.T).dot(Xd.T)) + Q
     return (mu, X, Sigma, Xd)
 
-def ukf(x, P, z, Q, R):
+def ukf(x, P, z, Q, R, u):
     """UKF
     args:
         x: a priori state estimate
@@ -71,8 +87,8 @@ def ukf(x, P, z, Q, R):
     Wc[0] +=  (1-alpha**2+beta)
     c_nr=np.sqrt(c_n)
     X = sigmaPoints(x,P,c_nr)
-    x1, X1, P1, X2 = ut(f, X, Wm, Wc, 3, Q)
-    z1,Z1,P2,Z2 =ut(h, X1,Wm,Wc, 1, R)
+    x1, X1, P1, X2 = ut(dss, X, Wm, Wc, n, Q)
+    z1,Z1,P2,Z2 =ut(sss, X1,Wm,Wc, int(n/2), R)
     P12=X2.dot(np.diag(Wc).dot(Z2.T))
     K=P12.dot(inv(P2))
     x=x1+K.dot(z-z1)
@@ -88,22 +104,24 @@ if __name__=='__main__':
     # test(4)
     # test.inspect_types()
     # print('test')
-    s = np.array([0,0,1])
+    Ns = 12 # number of states
+    s = np.zeros(Ns)
+    u = np.zeros(Ns)
     q=0.1
     r=0.1
-    Q = q**2*np.eye(3)
+    Q = q**2*np.eye(Ns)
     R = r**2
-    P = np.eye(3)
-    x = s+q*np.random.random(3)
+    P = np.eye(Ns)
+    x = s+q*np.random.random(Ns)
     N = 20
-    xV = np.zeros((3,N))
+    xV = np.zeros((Ns,N))
     sV = np.copy(xV)
     zV = np.zeros(N)
     for k in range(N):
         z = h(s)+r*np.random.random()
         sV[:,k] = s
         zV[k] = z
-        x, P = ukf(x,P,z,Q,R)
+        x, P = ukf(x, P, z, Q, R, u)
         xV[:,k] = x
-        s = f(s) + q*np.random.random(3)
+        s = dss(s) + q*np.random.random(Ns)
         pass
