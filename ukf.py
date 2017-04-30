@@ -1,17 +1,23 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import numpy as np
 from numba import jit, int16
 from numpy.linalg import cholesky, inv, det
 import matplotlib.pyplot as plt
 import pdb
 
-"""Filtering implementation for state estimation
-This module estimates the state of the UAV from given sensor meaurements
-using unscented Kalman filter.
-state:
-    x: position, velocity
-    R: attitude, angular velocity
-    power: current, voltage, RPM
-"""
+
+class UnscentedKalmanFilter(object):
+    """Filtering implementation for state estimation
+    This module estimates the state of the UAV from given sensor meaurements
+    using unscented Kalman filter.
+    state:
+        x: position, velocity
+        R: attitude, angular velocity
+        power: current, voltage, RPM
+    """
+    def __init__(self, dim_x, dim_z, dt, hx, fx):
+        raise NotImplementedError
 
 def sigmaPoints(x, P, c):
     """Simg points computation"""
