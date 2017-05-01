@@ -26,9 +26,14 @@ class UnscentedKalmanFilter(object):
         self.P = np.eye(dim_x)
         self.Q = np.eye(dim_x)
         self.R = np.eye(dim_z)
+        self.m = 1.5
+        self.g = 9.8
+        self.J = np.eye(3)
+        self.R = np.eye(3)
+        self.e3 = np.array([0,0,1])
+        print('Unscented Kalman Filter initialized')
 
-
-    def sigmaPoints( x, P, c):
+    def sigmaPoints(self, x, P, c):
         """Simg points computation"""
         A = c*cholesky(P).T
         Y = np.tile(x,((A.shape)[0],1)).T
@@ -43,10 +48,16 @@ class UnscentedKalmanFilter(object):
             A[i][i], A[i][i+1] = 1, dt
             A[i+6][i+6] = 1
         # TODO: Implement controller input term here
+        # noting that u = [F, M] remember to bring them to inertial frame
+        B = np.zeros((self._dim_x, 6))
+        B[3:6,0:3] = 1/self.m*np.eye(3)
+        B[-3:,-3:] = self.J
+        uf = -u[0]*self.R.dot(self.e3)
+        uf = np.append( uf, self.R.dot(u[1:]))
+        xp = x + self._dt*B.dot(uf)
+        return xp
 
-        return A.dot(x)
-
-    def sss(x):
+    def sss(self, x, u = None):
         """Sensor state"""
         A = np.zeros((6,12))
         for i in range(6):
@@ -61,7 +72,7 @@ class UnscentedKalmanFilter(object):
         """nonlinear sensor function"""
         return np.array([x[0]])
 
-    def ut(func, x, wm, wc, n_f, Q):
+    def ut(self, func, x, wm, wc, n_f, Q, u = None):
         """unscented transform
         args:
             f: nonlinear map
@@ -75,13 +86,13 @@ class UnscentedKalmanFilter(object):
         X = np.zeros((n_f,m))
         mu = np.zeros(n_f)
         for i in range(m):
-            X[:,i] = func(x[:,i])
+            X[:,i] = func(x[:,i], u)
             mu = mu + wm[i]*X[:,i]
         Xd = X - np.tile(mu,(m,1)).T
         Sigma = Xd.dot(np.diag(wc.T).dot(Xd.T)) + Q
         return (mu, X, Sigma, Xd)
 
-    def ukf(x, P, z, Q, R, u):
+    def ukf(self, x, P, z, Q, R, u):
         """UKF
         args:
             x: a priori state estimate
@@ -104,9 +115,9 @@ class UnscentedKalmanFilter(object):
         Wc = np.copy(Wm)
         Wc[0] +=  (1-alpha**2+beta)
         c_nr=np.sqrt(c_n)
-        X = sigmaPoints(x,P,c_nr)
-        x1, X1, P1, X2 = ut(dss, X, Wm, Wc, n, Q)
-        z1,Z1,P2,Z2 =ut(sss, X1,Wm,Wc, int(n/2), R)
+        X = self.sigmaPoints(x,P,c_nr)
+        x1, X1, P1, X2 = self.ut(self.dss, X, Wm, Wc, n, Q, u)
+        z1,Z1,P2,Z2 = self.ut(self.sss, X1,Wm,Wc, int(n/2), R)
         P12=X2.dot(np.diag(Wc).dot(Z2.T))
         K=P12.dot(inv(P2))
         x=x1+K.dot(z-z1)
@@ -123,24 +134,25 @@ if __name__=='__main__':
     # test.inspect_types()
     # print('test')
     ukf_t = UnscentedKalmanFilter(12, 6, 0.01)
-    # Ns = 12 # number of states
-    # s = np.zeros(Ns)
-    # u = np.zeros(Ns)
-    # q=0.1
-    # r=0.1
-    # Q = q**2*np.eye(Ns)
-    # R = r**2
-    # P = np.eye(Ns)
-    # x = s+q*np.random.random(Ns)
-    # N = 20
-    # xV = np.zeros((Ns,N))
-    # sV = np.copy(xV)
-    # zV = np.zeros(N)
-    # for k in range(N):
-    #     z = h(s)+r*np.random.random()
-    #     sV[:,k] = s
-    #     zV[k] = z
-    #     x, P = ukf(x, P, z, Q, R, u)
-    #     xV[:,k] = x
-    #     s = dss(s) + q*np.random.random(Ns)
-    #     pass
+    # ukf_t.ukf(x,P, z, Q, R, u)
+    Ns = 12 # number of states
+    s = np.zeros(Ns)
+    u = np.zeros(4)
+    q=0.1
+    r=0.1
+    Q = q**2*np.eye(Ns)
+    R = r**2
+    P = np.eye(Ns)
+    x = s+q*np.random.random(Ns)
+    N = 20
+    xV = np.zeros((Ns,N))
+    sV = np.copy(xV)
+    zV = np.zeros((6,N))
+    for k in range(N):
+        z = ukf_t.sss(s)+r*np.random.random()
+        sV[:,k] = s
+        zV[:,k] = z
+        x, P = ukf_t.ukf(x, P, z, Q, R, u)
+        xV[:,k] = x
+        s = ukf_t.dss(s,u) + q*np.random.random(Ns)
+        pass
