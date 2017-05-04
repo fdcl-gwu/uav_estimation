@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 import numpy as np
 from numba import jit, int16
 from numpy.linalg import cholesky, inv, det
