@@ -15,7 +15,7 @@ class UnscentedKalmanFilter(object):
         R: attitude, angular velocity
         power: current, voltage, RPM
     """
-    def __init__(self, dim_x, dim_z, dt, hx=None, fx=None):
+    def __init__(self, dim_x=1, dim_z=1, dt=0.1, hx=None, fx=None):
         self._dt = dt
         self._dim_x = dim_x
         self._dim_z = dim_z
