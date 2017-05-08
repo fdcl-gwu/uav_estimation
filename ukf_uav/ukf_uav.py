@@ -123,8 +123,8 @@ class UnscentedKalmanFilter(object):
         P=P1-K.dot(P12.T)
         return x, P
 
-    @jit(int16(int16))
-    def test(a = 3):
+    # @jit(int16(int16))
+    def test(self, a = 3):
         x = a
         return x
 

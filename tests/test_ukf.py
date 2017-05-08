@@ -20,6 +20,8 @@ class TestUKF(unittest.TestCase):
         P = np.eye(3)
         c = np.sqrt(2)
     def test_ut(self):
+        uav = ukf_uav.UnscentedKalmanFilter()
+        assert uav.test(1) == 1
         pass
 
     def test_ukf(self):
